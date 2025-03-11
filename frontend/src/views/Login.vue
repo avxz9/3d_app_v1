@@ -1,6 +1,6 @@
 <template>
-  <form @submit.prevent="loginUser">
-    <div class="max-w-[600px] w-[95%] mx-auto border text-center py-5 mt-8 flex flex-col gap-4">
+  <form @submit.prevent="loginUser" class="min-h-[calc(100vh-4rem)]  flex items-center justify-center">
+    <div class="max-w-[600px] w-[95%] mx-auto border text-center py-5 mt-8 flex flex-col gap-4 ">
       <h1 class="text-2xl">Login</h1>
       <input
         type="text"
@@ -14,7 +14,7 @@
         placeholder="Pass123"
         class="w-[80%] border mx-auto py-2 px-2 rounded bg-gray-200/40"
       />
-      <button type="submit" class="bg-black w-fit px-4 py-2 mx-auto text-white rounded">Login</button>
+      <button type="submit" class="bg-gray-700 hover:bg-black w-fit mt-8 px-4 py-2 mx-auto text-white rounded">Login</button>
     </div>
   </form>
 </template>

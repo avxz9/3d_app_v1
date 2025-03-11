@@ -1,7 +1,7 @@
 <template>
  
  <form
-  @submit.prevent="register"
+  @submit.prevent="register" class="min-h-[calc(100vh-4rem)] flex items-center justify-center "
  >
 
     <div class="max-w-[600px] w-[95%] mx-auto border text-center py-5  mt-8 flex flex-col gap-4">
@@ -14,7 +14,7 @@
       <input type="password" v-model="form.pass" placeholder="Pass123" class="w-[80%] border mx-auto py-2 px-2 rounded bg-gray-200/40"/>
       <input type="password" v-model="form.repass" placeholder="Pass123" class="w-[80%] border mx-auto py-2 px-2 rounded bg-gray-200/40"/>
 
-      <button type="submit" class="bg-black w-fit px-4 py-2 mx-auto text-white rounded">Register</button>
+      <button type="submit" class="bg-gray-700 hover:bg-black w-fit mt-8 px-4 py-2 mx-auto text-white rounded">Register</button>
 <!-- 
       <form @submit.prevent="login">
         <input type="text" v-model="username" placeholder="Username" required />
@@ -27,8 +27,9 @@
 </template>
   
 <script setup >
-import axios from 'axios';
+
 import { reactive} from 'vue';
+import { api } from '../api';
 
 import { useRouter } from 'vue-router';
   const router = useRouter()
@@ -63,7 +64,7 @@ import { useRouter } from 'vue-router';
 
     if(valid){
       try{
-        const response = await axios.post('http://localhost:8000/api/register/', {
+        const response = await api.post('/auth/register/', {
           username: form.username,
           password: form.pass,
           email: form.email

@@ -17,7 +17,6 @@ ENV/
 media/
 static/
 
-migrations/
 
 .coverage
 *.coveragerc
@@ -47,7 +46,7 @@ node_modules/
 npm-debug.log
 yarn-error.log
 
-.env
+
 .vscode/
 .idea/
 

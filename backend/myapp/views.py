@@ -1,133 +1,138 @@
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from .models import ModelFile
-
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.models import User
-from .serializers import UserSerializer, ModelFileSerializer
-
-from rest_framework.parsers import MultiPartParser, FormParser
-from django.core.files.storage import FileSystemStorage
 import os
+import io 
+import open3d as o3d
 
-from decouple import AutoConfig
 from django.http import HttpResponse
+from django.core.files.storage import FileSystemStorage
+from django.contrib.auth import authenticate
+from django.shortcuts import get_object_or_404
+
+from rest_framework import viewsets, status, permissions, serializers
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-config = AutoConfig(search_path='.env')
+from decouple import AutoConfig
+from .models import ModelFile
+from .serializers import UserSerializer, ModelFileSerializer
+
+import xlsxwriter
+
+config = AutoConfig(search_path=".env")
 
 
-@api_view(['POST'])
-def register(request):
-    if request.method == 'POST':
+
+class AuthViewSet(viewsets.ViewSet):
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def register(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            return Response({'message': 'User created successfully!'}, status=status.HTTP_201_CREATED)
+            serializer.save()
+            return Response({"message": "User created successfully!"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-def login(request):
-    """
-    Login a user and return access and refresh tokens.
-    """
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def login(self, request):
+        user = authenticate(username=request.data.get("username"), password=request.data.get("password"))
+        if not user:
+            return Response({"detail": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
 
-    print("Here in login")
-    username = request.data.get('username')
-    password = request.data.get('password')
+        refresh = RefreshToken.for_user(user)
+        return Response({"refresh": str(refresh), "access": str(refresh.access_token)})
 
-    if not username or not password:
-        return Response({"detail": "Username and password are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        
-        user = User.objects.get(username=username)
-    except User.DoesNotExist:
-        return Response({"detail": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
-
-    if not user.check_password(password):
-        return Response({"detail": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
-
-  
-    refresh = RefreshToken.for_user(user)
-    access_token = refresh.access_token
-
-   
-    return Response({
-        'refresh': str(refresh),
-        'access': str(access_token),
-    })
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def profile(request):
-    user = request.user  
-    return Response({
-        'username': user.username,
-        'email': user.email,
-    })
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])  
-def user_model_files(request):
-    print(request.user)
-    user_models =ModelFile.objects.filter(user=request.user)
-    serializer = ModelFileSerializer(user_models, many=True)
-    return Response(serializer.data)
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def profile(self, request):
+        return Response({"username": request.user.username, "email": request.user.email})
 
 
 
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def upload_model(request):
-    print("In add model")
-   
+class ModelFileViewSet(viewsets.ModelViewSet):
+    serializer_class = ModelFileSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
-    
-    
-    if 'model_file' not in request.FILES:
-        return Response({'detail': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    
-    model_file = request.FILES['model_file']
-    file_directory = request.user.username 
 
-  
-    fs = FileSystemStorage(location=os.path.join(config("NGINX_PATH"), file_directory))  # Path where files will be stored
-    file_name = fs.save(model_file.name, model_file)
-    file_path = fs.url(file_name)  
+    def get_queryset(self):
+        return ModelFile.objects.filter(user=self.request.user)
 
-   
-    model_instance = ModelFile.objects.create(
-        user=request.user,
-        file_name=file_name,
-        file_path=file_path  
-    )
-    
-    return Response({
-        'message': 'File uploaded successfully'
-    }, status=status.HTTP_201_CREATED)
+    def perform_create(self, serializer):
+        
+        user = self.request.user
+        model_file = self.request.FILES.get("model_file")
+
+        if not user.is_authenticated:
+            raise serializers.ValidationError({"detail": "User authentication required."})
+
+        if not model_file:
+            raise serializers.ValidationError({"detail": "No file uploaded."})
 
 
+        file_directory = os.path.join(config("NGINX_PATH"), user.username)
+        fs = FileSystemStorage(location=file_directory)
+        file_name = fs.save(model_file.name, model_file)
+        file_path = os.path.join(file_directory, file_name).replace("\\", "/")  
+        
+
+        try:
+            mesh = o3d.io.read_triangle_mesh(file_path)
+            vertices_count, faces_count = len(mesh.vertices), len(mesh.triangles)
+        except Exception:
+            raise serializers.ValidationError({"detail": "Invalid 3D model file."})
+
+        serializer.save(
+            user=user,
+            file_name=file_name,
+            file_path=file_path,
+            vertices_count=vertices_count,
+            faces_count=faces_count,
+        )
 
 
 
+def generate_report(request):
+    format = request.GET.get('format', 'pdf')
 
+    if format == 'pdf':
+        return generate_pdf()
+    elif format == 'excel':
+        return generate_excel()
 
-def generate_pdf(request):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="generated-file.pdf"'
+    else:
+        return HttpResponse("Invalid format", status=400)
+
+def generate_pdf():
+    buffer = io.BytesIO()
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="generated-file.pdf"'
 
     pdf = canvas.Canvas(response, pagesize=letter)
-    
-    pdf.drawString(100, 750, "Report")
-
+    pdf.drawString(100, 750, "3D Model Report")
     pdf.showPage()
     pdf.save()
 
+    buffer.seek(0)
     return response
+
+def generate_excel():
+    buffer = io.BytesIO()
+    workbook = xlsxwriter.Workbook(buffer)
+    worksheet = workbook.add_worksheet()
+ 
+    worksheet.write(0, 0, "Defect 1")
+    worksheet.write(0, 1, "Defect 2")
+
+    workbook.close()
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = 'attachment; filename="report.xlsx"'
+    return response
+
+
+

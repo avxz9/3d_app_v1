@@ -16,4 +16,10 @@ class UserSerializer(serializers.ModelSerializer):
 class ModelFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ModelFile
-        fields = ['file_name', 'file_path', 'user']
+        fields = ['id', 'file_name', 'file_path', 'user', 'vertices_count', 'faces_count']
+        read_only_fields = ['id', 'file_name', 'file_path', 'user', 'vertices_count', 'faces_count']  
+        
+        
+
+
+
