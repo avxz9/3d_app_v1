@@ -24,7 +24,9 @@ class DefectAnalysis(models.Model):
     report_path = models.CharField(max_length=500, blank=True, null=True)  
     defect_count = models.PositiveIntegerField(default=0)
     details = models.JSONField(blank=True, null=True) 
-
+    is_watertight = models.BooleanField(default=False)
+    defect_data = models.JSONField(default=dict) 
+    task_id = models.CharField(max_length=50, blank=True, null=True)
     def __str__(self):
         return f"Analysis of {self.model_file.file_name} - {self.status}"
 

@@ -8,6 +8,4 @@ input {
     @apply ring-0 outline-none focus:outline-none
 }
 
-nav a {
-    @apply hover:text-white;
-}
+

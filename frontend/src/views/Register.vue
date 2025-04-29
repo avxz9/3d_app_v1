@@ -1,37 +1,72 @@
 <template>
- 
- <form
-  @submit.prevent="register" class="min-h-[calc(100vh-4rem)] flex items-center justify-center "
- >
-
-    <div class="max-w-[600px] w-[95%] mx-auto border text-center py-5  mt-8 flex flex-col gap-4">
-
-      
-      <h1 class="text-2xl">Register</h1>
-      
-      <input type="text"  v-model="form.username" placeholder="username" class="w-[80%] border mx-auto py-2 px-2 rounded bg-gray-200/40"/>
-      <input type="email" v-model="form.email" placeholder="email@email.com" class="w-[80%] border mx-auto py-2 px-2 rounded bg-gray-200/40"/>
-      <input type="password" v-model="form.pass" placeholder="Pass123" class="w-[80%] border mx-auto py-2 px-2 rounded bg-gray-200/40"/>
-      <input type="password" v-model="form.repass" placeholder="Pass123" class="w-[80%] border mx-auto py-2 px-2 rounded bg-gray-200/40"/>
-
-      <button type="submit" class="bg-gray-700 hover:bg-black w-fit mt-8 px-4 py-2 mx-auto text-white rounded">Register</button>
-<!-- 
-      <form @submit.prevent="login">
-        <input type="text" v-model="username" placeholder="Username" required />
-        <input type="password" v-model="password" placeholder="Password" required />
-        <button type="submit">Login</button>
-      </form> -->
+  <div class="h-[calc(100vh-4rem)] w-full flex flex-col md:flex-row py-12 md:py-0 mt-16">
+    <div class="hidden md:flex md:w-1/2 bg-gray-900 justify-center items-start">
+      <img
+          src="https://images.unsplash.com/photo-1634848577969-bc28ee71ffc1?q=80&w=1528&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+        alt="Register visual"
+        class="w-full h-full object-cover object-top"
+      />
     </div>
-  </form>
-   
+
+    <div class="w-full md:w-1/2 flex items-center justify-center bg-white px-6 py-12">
+      <form @submit.prevent="register" class="w-full max-w-md space-y-5 text-center">
+        <h1 class="text-3xl font-bold text-gray-800">Register</h1>
+
+        <input
+          type="text"
+          v-model="form.username"
+          placeholder="Username"
+          class="w-full border border-gray-300 bg-gray-100 py-2 px-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+
+        <input
+          type="email"
+          v-model="form.email"
+          placeholder="email@example.com"
+          class="w-full border border-gray-300 bg-gray-100 py-2 px-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+
+        <input
+          type="password"
+          v-model="form.pass"
+          placeholder="Password"
+          class="w-full border border-gray-300 bg-gray-100 py-2 px-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+
+        <input
+          type="password"
+          v-model="form.repass"
+          placeholder="Repeat Password"
+          class="w-full border border-gray-300 bg-gray-100 py-2 px-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+
+        <button
+          type="submit"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded transition"
+        >
+          Register
+        </button>
+
+        <p class="text-sm text-gray-600 mt-4">
+          Already have an account?
+          <router-link to="/login" class="text-blue-600 hover:underline">
+            Log in here
+          </router-link>
+        </p>
+      </form>
+    </div>
+  </div>
 </template>
+
   
 <script setup >
 
-import { reactive} from 'vue';
-import { api } from '../api';
+  import { reactive} from 'vue';
+  import { api } from '../api';
+  import { useToast } from 'vue-toastification';
+  import { useRouter } from 'vue-router';
 
-import { useRouter } from 'vue-router';
+  const toast = useToast()
   const router = useRouter()
 
   const form = reactive({
@@ -76,7 +111,7 @@ import { useRouter } from 'vue-router';
         form.email=""
 
 
-        alert("Succesfully registered ")
+        toast.success("Successfully registered!")
         router.push("/login")
 
         console.log("Here")
